@@ -13,7 +13,7 @@ public class AchievementInfo
     [JsonPropertyName("name")]
     public string Name { get; }
 
-    [JsonPropertyName("desc")]
+    [JsonPropertyName("description")]
     public string Description { get; }
 
     public AchievementInfo(
@@ -529,7 +529,6 @@ public class AchievementDetailedInfoAttribute : Attribute
 {
     public bool IncludeInSearch { get; set; } = true;
 }
-
 
 public static partial class Extensions
 {
