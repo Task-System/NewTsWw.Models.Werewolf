@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Reflection;
+using System.Net;
 
 namespace NewTsWw.Models.Werewolf;
 
@@ -28,18 +29,21 @@ public class WerewolfRequest : IDisposable
 {
     private readonly HttpClient _httpClient;
 
-    public WerewolfRequest()
+    public Uri? BaseAddress { get; }
+
+    public WerewolfRequest(Uri? baseAddress = default)
     {
+        BaseAddress = baseAddress;
         _httpClient = new HttpClient
         {
             Timeout = TimeSpan.FromSeconds(5),
-            BaseAddress = new Uri("https://www.tgwerewolf.com/Stats")
+            BaseAddress = BaseAddress?? new Uri("https://www.tgwerewolf.com/Stats")
         };
     }
 
     public Task<TValue?> GetEndpoint<TValue>(
         WerewolfRequestEndpoint endpoint, long userId)
-            => _httpClient.GetFromJsonAsync<TValue>(_httpClient.BaseAddress + $"/{endpoint}/?pid={userId}&json=true");
+            => _httpClient.GetFromJsonAsync<TValue>(_httpClient.BaseAddress + WebUtility.UrlEncode($"/{endpoint}/?pid={userId}&json=true"));
 
     public async Task<AchievementInfo[]?> GetAchievements(long userId)
     {
