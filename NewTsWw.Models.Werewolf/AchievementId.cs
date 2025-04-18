@@ -10,6 +10,9 @@ public class AchievementInfo
     [JsonIgnore]
     public AchievementId AchievementId { get; }
 
+    [JsonIgnore]
+    public AchievementDetailedInfo? DetailedInfo { get; }
+
     [JsonPropertyName("name")]
     public string Name { get; }
 
@@ -22,6 +25,7 @@ public class AchievementInfo
         AchievementId = achievementId;
         Name = name;
         Description = description;
+        DetailedInfo = achievementId.GetEnumFieldAttribute<AchievementId, AchievementDetailedInfo>();
     }
 
     [JsonConstructor]
@@ -30,6 +34,7 @@ public class AchievementInfo
         Name = name;
         Description = description;
         AchievementId = Achievements.All.First(x => x.Name == Name).AchievementId;
+        DetailedInfo = AchievementId.GetEnumFieldAttribute<AchievementId, AchievementDetailedInfo>();
     }
 
     public override string ToString()
@@ -64,11 +69,11 @@ public enum AchievementId
     [Display(Name = "Spy vs Spy"), Description("Play a game in secret mode (no role reveal)")]
     SpyVsSpy = 5,
 
-    [AchievementDetailedInfo(IncludeInSearch = false)]
+    [AchievementDetailedInfo(IncludeInSearch = false, AchievingType = AchievementAchievingType.Unavailable)]
     [Display(Name = "Explorer"), Description("Play at least 2 games each in 10 different groups")]
     Explorer = 6,
 
-    [AchievementDetailedInfo(IncludeInSearch = false)]
+    [AchievementDetailedInfo(IncludeInSearch = false, AchievingType = AchievementAchievingType.Unavailable)]
     [Display(Name = "Linguist"), Description("Play at least 2 games each in 10 different language packs")]
     Linguist = 7,
 
@@ -98,11 +103,11 @@ public enum AchievementId
     [Display(Name = "Obsessed"), Description("Play 1000 games")]
     Obsessed = 13,
 
-    [AchievementDetailedInfo(IncludeInSearch = false)]
+    [AchievementDetailedInfo(IncludeInSearch = false, AchievingType = AchievementAchievingType.NotViaPlaying)]
     [Display(Name = "Here's Johnny!"), Description("Get 50 kills as the serial killer")]
     HereJohnny = 14,
 
-    [AchievementDetailedInfo(IncludeInSearch = false)]
+    [AchievementDetailedInfo(IncludeInSearch = false, AchievingType = AchievementAchievingType.NotViaPlaying)]
     [Display(Name = "I've Got Your Back"), Description("Save 50 people as the Guardian Angel")]
     GotYourBack = 15,
 
@@ -126,7 +131,7 @@ public enum AchievementId
     [Display(Name = "Survivalist"), Description("Survive 100 games")]
     Survivalist = 19,
 
-    [AchievementDetailedInfo(IncludeInSearch = false)]
+    [AchievementDetailedInfo(IncludeInSearch = false, AchievingType = AchievementAchievingType.Unavailable)]
     [Display(Name = "Black Sheep"), Description("Get lynched first 3 games in a row")]
     BlackSheep = 20,
 
@@ -204,7 +209,7 @@ public enum AchievementId
     [Display(Name = "Forbidden Love"), Description("Win as a wolf / villager couple (villager, not village team)")]
     ForbiddenLove = 32,
 
-    [AchievementDetailedInfo(IncludeInSearch = false)]
+    [AchievementDetailedInfo(IncludeInSearch = false, AchievingType = AchievementAchievingType.NotViaPlaying)]
     [Display(Name = "Developer"), Description("Have a pull request merged into the repo")]
     Developer = 33,
 
@@ -524,38 +529,55 @@ public static class Achievements
     }
 }
 
+public enum AchievementAchievingType
+{
+    [Display(Name = "Normal"), Description("Achievements can be achieved normally via playing game.")]
+    Normal,
+
+    [Display(Name = "Unavailable"), Description("Achievements can't be achieved any more.")]
+    Unavailable,
+
+    [Display(Name = "Not via playing"), Description("Achievements can't be achieved via playing games.")]
+    NotViaPlaying
+}
+
 [AttributeUsage(AttributeTargets.Field)]
-public class AchievementDetailedInfoAttribute : Attribute
+public class AchievementDetailedInfo : Attribute
 {
     public bool IncludeInSearch { get; set; } = true;
+
+    public AchievementAchievingType AchievingType { get; set; } = AchievementAchievingType.Normal;
 }
 
 public static partial class Extensions
 {
-    public static string GetDescription(this AchievementId value)
+    public static A? GetEnumFieldAttribute<E, A>(this E value)
+        where E : Enum
+        where A : Attribute
     {
         FieldInfo? fi = value.GetType().GetField(value.ToString());
 
-        DescriptionAttribute[]? attributes =
-            (DescriptionAttribute[]?)fi?.GetCustomAttributes(
-            typeof(DescriptionAttribute),
-            false);
+        A[]? attributes = (A[]?)fi?.GetCustomAttributes(typeof(A), false);
 
         if (attributes != null &&
             attributes.Length > 0)
-            return attributes[0].Description;
+            return attributes[0];
         else
-            return value.ToString();
+            return null;
     }
 
-    public static string GetName(this AchievementId value)
-    {
-        var fieldInfo = value.GetType().GetField(value.ToString());
+    public static string GetDescriptionAttribute<E>(this E value)
+        where E : Enum 
+        => value.GetEnumFieldAttribute<E, DescriptionAttribute>()?.Description ?? value.ToString();
 
-        if (fieldInfo?.GetCustomAttributes(
-            typeof(DisplayAttribute), false) is not DisplayAttribute[] descriptionAttributes) return string.Empty;
-        return (descriptionAttributes.Length > 0 ? descriptionAttributes[0].Name : value.ToString())!;
-    }
+    public static string GetNameAttribute<E>(this E value)
+        where E : Enum
+        => value.GetEnumFieldAttribute<E, DisplayAttribute>()?.Name ?? value.ToString();
+
+    public static string GetDescription(this AchievementId value)
+        => value.GetDescriptionAttribute();
+
+    public static string GetName(this AchievementId value) => value.GetNameAttribute();
 
     public static AchievementInfo GetAchievementInfo(this AchievementId achievement)
     {
