@@ -31,19 +31,19 @@ public class WerewolfRequest : IDisposable
 
     public Uri? BaseAddress { get; }
 
-    public WerewolfRequest(Uri? baseAddress = default)
+    public WerewolfRequest(
+        Uri? baseAddress = default, HttpClient? httpClient = default)
     {
-        BaseAddress = baseAddress;
-        _httpClient = new HttpClient
+        BaseAddress = baseAddress ?? new Uri("https://www.tgwerewolf.com/Stats");
+        _httpClient = httpClient ?? new HttpClient
         {
-            Timeout = TimeSpan.FromSeconds(5),
-            BaseAddress = BaseAddress?? new Uri("https://www.tgwerewolf.com/Stats")
+            Timeout = TimeSpan.FromSeconds(5)
         };
     }
 
     public Task<TValue?> GetEndpoint<TValue>(
         WerewolfRequestEndpoint endpoint, long userId)
-            => _httpClient.GetFromJsonAsync<TValue>(_httpClient.BaseAddress + WebUtility.UrlEncode($"/{endpoint}/?pid={userId}&json=true"));
+            => _httpClient.GetFromJsonAsync<TValue>(BaseAddress + WebUtility.UrlEncode($"/{endpoint}/?pid={userId}&json=true"));
 
     public async Task<AchievementInfo[]?> GetAchievements(long userId)
     {
